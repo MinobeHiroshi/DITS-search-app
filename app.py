@@ -7,7 +7,17 @@ import streamlit.components.v1 as components
 from datetime import datetime
 
 # --- 1. 画面設定 ---
-st.set_page_config(layout="wide", page_title="DITS 統合検索システム")
+st.set_page_config(
+    layout="wide", 
+    page_title="DITS 統合検索システム",
+    # 検索エンジンにインデックスされにくくするための設定（気休めですが重要です）
+    initial_sidebar_state="collapsed",
+    menu_items={
+        'Get Help': None,
+        'Report a bug': None,
+        'About': None
+    }
+)
 
 # --- 2. セキュリティ・認証設定 ---
 USER_DB = {"Minobe": "Genuemon320"}
