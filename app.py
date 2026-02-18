@@ -10,7 +10,7 @@ from datetime import datetime
 st.set_page_config(
     layout="wide", 
     page_title="DITS 統合検索システム",
-    # 検索エンジンにインデックスされにくくするための設定（気休めですが重要です）
+    # 検索エンジンにインデックスされにくくするための設定
     initial_sidebar_state="collapsed",
     menu_items={
         'Get Help': None,
@@ -20,7 +20,12 @@ st.set_page_config(
 )
 
 # --- 2. セキュリティ・認証設定 ---
-USER_DB = {"Minobe": "Genuemon320"}
+# STAFF IDを追加しました
+USER_DB = {
+    "minobe": "Genuemon320",
+    "ikeda": "Dits0401",
+    "shudo": "Dits0401"
+}
 
 def check_password():
     if "authenticated" not in st.session_state:
@@ -116,7 +121,6 @@ if check_password():
                 try:
                     df = pd.read_excel(xls, sheet_name=sn, header=None)
                     h_idx = -1
-                    # 見出し行を深く探す（25行目まで）
                     for r in range(min(25, len(df))):
                         row_vals = [str(v).strip() for v in df.iloc[r].values]
                         if any(k in row_vals for k in ['型番', '型式', '品名', '注番']):
@@ -124,17 +128,14 @@ if check_password():
                     if h_idx == -1: continue 
                     tdf = df.iloc[h_idx+1:].copy()
                     tdf.columns = [alias_map.get(str(c).strip(), str(c).strip()) for c in df.iloc[h_idx]]
-                    tdf = tdf.loc[:, ~tdf.columns.duplicated()] # 重複列削除
+                    tdf = tdf.loc[:, ~tdf.columns.duplicated()]
                     tdf['参照月'] = sn
                     combined.append(tdf.reindex(columns=target_cols, fill_value=""))
                 except: continue
             
             df_m = pd.concat(combined, ignore_index=True)
-            
-            # 全データのクレンジング
             for col in df_m.columns:
                 if col == '客先納期':
-                    # 【修正箇所】日付形式に変換し、時刻をカットして文字列にする
                     df_m[col] = pd.to_datetime(df_m[col], errors='coerce').dt.strftime('%Y-%m-%d').fillna("")
                 else:
                     df_m[col] = df_m[col].apply(lambda x: str(x).strip().replace(".0", "") if pd.notnull(x) and str(x).strip().lower() not in ["nan", "none", "0", "0.0", "00:00:00"] else "")
@@ -151,7 +152,6 @@ if check_password():
             df_m[['年度', '月', 'sort_key']] = df_m['参照月'].apply(lambda x: pd.Series(d_info(x)))
             return df_m.sort_values('sort_key', ascending=False).drop(columns=['sort_key']).astype(str)
 
-        # --- 実行 ---
         df_master = load_data()
         
         st.sidebar.title(f"👤 {st.session_state.user}")
@@ -160,7 +160,8 @@ if check_password():
             st.rerun()
 
         st.sidebar.header("🔍 検索メニュー")
-        q = st.sidebar.text_input("型番を手入力").strip().upper()
+        # ラベルを変更
+        q = st.sidebar.text_input("［ 型番 or 注番 ］ 検索").strip().upper()
         f = st.sidebar.file_uploader("CSVで一斉検索", type=["csv"])
         
         keywords = []
@@ -176,7 +177,12 @@ if check_password():
 
         if keywords:
             for kw in list(dict.fromkeys([k for k in keywords if k != "型番リスト"])):
-                res = df_master[df_master['型番'].str.upper().str.contains(re.escape(kw), na=False)].copy()
+                # 型番と注番の両方を検索対象に修正
+                res = df_master[
+                    (df_master['型番'].str.upper().str.contains(re.escape(kw), na=False)) | 
+                    (df_master['注番'].str.upper().str.contains(re.escape(kw), na=False))
+                ].copy()
+                
                 if not res.empty:
                     write_log("Search", kw)
                     st.markdown("---")
@@ -194,7 +200,6 @@ if check_password():
                                          column_config={"仕入先": st.column_config.LinkColumn("仕入先", display_text=r"#(.*)")})
                 else: st.sidebar.warning(f"「{kw}」実績なし")
         else:
-            # 統計表示（中央寄せ＋ブランク）
             st.info("左のサイドバーから検索してください。")
             summary = df_master.groupby(['年度', '月']).size().reset_index(name='count')
             summary['年度_int'] = summary['年度'].apply(lambda x: int(float(x)))
