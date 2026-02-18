@@ -120,9 +120,14 @@ if check_password():
                 except: continue
             
             df_m = pd.concat(combined, ignore_index=True)
+            
             # 全データのクレンジング
             for col in df_m.columns:
-                df_m[col] = df_m[col].apply(lambda x: str(x).strip().replace(".0", "") if pd.notnull(x) and str(x).strip().lower() not in ["nan", "none", "0", "0.0", "00:00:00"] else "")
+                if col == '客先納期':
+                    # 【修正箇所】日付形式に変換し、時刻をカットして文字列にする
+                    df_m[col] = pd.to_datetime(df_m[col], errors='coerce').dt.strftime('%Y-%m-%d').fillna("")
+                else:
+                    df_m[col] = df_m[col].apply(lambda x: str(x).strip().replace(".0", "") if pd.notnull(x) and str(x).strip().lower() not in ["nan", "none", "0", "0.0", "00:00:00"] else "")
             
             df_m = df_m[df_m['型番'] != ""]
             
