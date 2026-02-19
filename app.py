@@ -23,8 +23,10 @@ st.set_page_config(
 # STAFF IDを追加しました
 USER_DB = {
     "minobe": "Genuemon320",
-    "ikeda": "Dits0401",
-    "shudo": "Dits0401"
+    "ikeda": "$Dits0401",
+    "shudo": "$Dits0401",
+    "dits": "$Dits0401"
+
 }
 
 def check_password():
